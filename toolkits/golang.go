@@ -328,7 +328,7 @@ func goBuildInIsolation(packageName, srcPath, outputBinPath string) error {
 }
 
 // stepIDorURI : doesn't work for "path::./" yet!!
-func stepBinaryFilename(sIDData models.StepIDData) string {
+func stepBinaryFilename(stepLibSource, IDOrURI, version string) string {
 	//
 	replaceRexp, err := regexp.Compile("[^A-Za-z0-9.-]")
 	if err != nil {
@@ -337,15 +337,23 @@ func stepBinaryFilename(sIDData models.StepIDData) string {
 	}
 
 	compositeStepID := fmt.Sprintf("%s-%s-%s",
-		sIDData.SteplibSource, sIDData.IDorURI, sIDData.Version)
+		stepLibSource, IDOrURI, version)
 
 	safeStepID := replaceRexp.ReplaceAllString(compositeStepID, "_")
+	fmt.Printf("safeStepID: (%s)\n", safeStepID)
 	//
 	return safeStepID
 }
 
 func stepBinaryCacheFullPath(sIDData models.StepIDData) string {
-	return filepath.Join(goToolkitCacheRootPath(), stepBinaryFilename(sIDData))
+	id := sIDData.IDorURI
+	if sIDData.SteplibSource == "path" {
+		fullPath, err := filepath.Abs(sIDData.IDorURI)
+		if err == nil {
+			id = fullPath
+		}
+	}
+	return filepath.Join(goToolkitCacheRootPath(), stepBinaryFilename(sIDData.SteplibSource, id, sIDData.Version))
 }
 
 // PrepareForStepRun ...
