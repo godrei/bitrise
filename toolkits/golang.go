@@ -371,6 +371,11 @@ func (toolkit GoToolkit) PrepareForStepRun(step stepmanModels.StepModel, sIDData
 	}
 	packageName := step.Toolkit.Go.PackageName
 
+	exist, _ := pathutil.IsPathExists(filepath.Join(stepAbsDirPath, "go.mod"))
+	if exist {
+		return goBuild(packageName, stepAbsDirPath, fullStepBinPath)
+	}
+
 	return goBuildInIsolation(packageName, stepAbsDirPath, fullStepBinPath)
 }
 
