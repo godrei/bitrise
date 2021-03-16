@@ -15,6 +15,7 @@ import (
 	"github.com/bitrise-io/bitrise/tools"
 	"github.com/bitrise-io/bitrise/utils"
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
@@ -254,6 +255,30 @@ func (toolkit GoToolkit) Install() error {
 }
 
 // === Toolkit: Prepare for Step Run ===
+
+func goBuild(packageName, srcPath, outputBinPath string) error {
+	isInstallRequired, _, goConfig, err := selectGoConfiguration()
+	if err != nil {
+		return fmt.Errorf("Failed to select an appropriate Go installation for compiling the step, error: %s", err)
+	}
+	if isInstallRequired {
+		return fmt.Errorf("Failed to select an appropriate Go installation for compiling the step, error: %s",
+			"Found Go version is older than required. Please run 'bitrise setup' to check and install the required version")
+	}
+
+	cmd := command.New(goConfig.GoBinaryPath, "build", "-o", outputBinPath, packageName)
+	cmd.SetDir(srcPath)
+	cmd.AppendEnvs("GOROOT=" + goConfig.GOROOT)
+
+	if out, err := cmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
+		if errorutil.IsExitStatusError(err) {
+			return fmt.Errorf("failed to install package:\n%s", out)
+		}
+		return fmt.Errorf("failed to install package, error: %s", err)
+	}
+
+	return nil
+}
 
 func goBuildInIsolation(packageName, srcPath, outputBinPath string) error {
 	workspaceRootPath, err := pathutil.NormalizedOSTempDirPath("bitrise-go-toolkit")
